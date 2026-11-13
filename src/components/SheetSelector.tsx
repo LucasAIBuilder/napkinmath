@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+
+const EmojiPicker = lazy(() => import("emoji-picker-react"));
 
 export type Sheet = {
   id: string;
@@ -53,7 +55,7 @@ export default function SheetSelector(props: Props) {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const [dialog, setDialog] = useState<{ type: "emoji" | "delete"; id: string } | null>(null);
-  const [emoji, setEmoji] = useState("");
+  const emojiActionRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const longPressRef = useRef<number | null>(null);
   const longPressFiredRef = useRef(false);
@@ -62,7 +64,7 @@ export default function SheetSelector(props: Props) {
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !dialog) {
         setMenu(null);
         setMobileOpen(false);
         setRenamingId(null);
@@ -70,7 +72,7 @@ export default function SheetSelector(props: Props) {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [setMobileOpen]);
+  }, [setMobileOpen, dialog]);
 
   useEffect(() => {
     if (dialog) dialogRef.current?.showModal();
@@ -302,11 +304,9 @@ export default function SheetSelector(props: Props) {
             <button
               type="button"
               className="nm-btn flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-black/5"
+              ref={emojiActionRef}
               onClick={() => {
-                const cur = sheets.find((s) => s.id === menu.id);
-                setEmoji(cur?.emoji ?? "");
                 setDialog({ type: "emoji", id: menu.id });
-                setMenu(null);
               }}
             >
               Emoji
@@ -336,28 +336,54 @@ export default function SheetSelector(props: Props) {
       {dialog && (
         <dialog
           ref={dialogRef}
-          onClose={() => setDialog(null)}
+          onKeyDown={(e) => { if (e.key === "Escape") e.stopPropagation(); }}
+          onClose={() => {
+            if (dialog.type === "emoji") requestAnimationFrame(() => emojiActionRef.current?.focus());
+            setDialog(null);
+          }}
           aria-labelledby="sheet-dialog-title"
           className="w-[min(90vw,24rem)] rounded-xl border p-5 shadow-xl backdrop:bg-black/50"
           style={{ background: "var(--nm-bg-card)", borderColor: "var(--nm-border)", color: "var(--nm-text)" }}
         >
           <form onSubmit={(e) => {
             e.preventDefault();
-            if (dialog.type === "emoji") {
-              if (emoji.trim()) onEmoji(dialog.id, emoji.trim());
-            } else onDelete(dialog.id);
-            dialogRef.current?.close();
+            if (dialog.type === "delete") {
+              onDelete(dialog.id);
+              dialogRef.current?.close();
+            }
           }}>
             <h2 id="sheet-dialog-title" className="text-base font-semibold">
               {dialog.type === "emoji" ? "Change emoji" : "Delete sheet?"}
             </h2>
             {dialog.type === "emoji" ? (
-              <label className="mt-4 block text-sm">
-                Emoji
-                <input autoFocus value={emoji} onChange={(e) => setEmoji(e.target.value)}
-                  className="nm-ios-nozoom mt-1 block w-full rounded-md border bg-transparent px-3 py-2"
-                  style={{ borderColor: "var(--nm-border)" }} />
-              </label>
+              <div className="mt-4">
+                <Suspense fallback={<p role="status">Loading emoji…</p>}>
+                  <EmojiPicker
+                    width="100%"
+                    height={360}
+                    emojiStyle="native"
+                    autoFocusSearch
+                    previewConfig={{ showPreview: false }}
+                    onEmojiClick={(selected) => {
+                      onEmoji(dialog.id, selected.emoji);
+                      dialogRef.current?.close();
+                    }}
+                    style={{
+                      "--epr-bg-color": "var(--nm-bg-card)",
+                      "--epr-text-color": "var(--nm-text)",
+                      "--epr-picker-border-color": "var(--nm-border)",
+                      "--epr-search-input-bg-color": "var(--nm-bg)",
+                      "--epr-search-input-bg-color-active": "var(--nm-bg)",
+                      "--epr-category-label-bg-color": "var(--nm-bg-card)",
+                      "--epr-hover-bg-color": "var(--nm-bg-active)",
+                      "--epr-focus-bg-color": "var(--nm-bg-active)",
+                      "--epr-highlight-color": "var(--nm-accent)",
+                      "--epr-category-icon-active-color": "var(--nm-accent)",
+                      "--epr-category-icon-inactive-color": "var(--nm-text-muted)",
+                    } as React.CSSProperties}
+                  />
+                </Suspense>
+              </div>
             ) : (
               <p className="mt-3 text-sm" style={{ color: "var(--nm-text-muted)" }}>
                 Delete “{sheets.find((s) => s.id === dialog.id)?.name ?? "sheet"}”?
@@ -367,10 +393,8 @@ export default function SheetSelector(props: Props) {
             <div className="mt-5 flex justify-end gap-2">
               <button type="button" autoFocus={dialog.type === "delete"} onClick={() => dialogRef.current?.close()}
                 className="nm-btn rounded-md border px-3 py-2 text-sm" style={{ borderColor: "var(--nm-border)" }}>Cancel</button>
-              <button type="submit" className="nm-btn rounded-md px-3 py-2 text-sm font-medium"
-                style={{ background: dialog.type === "delete" ? "var(--nm-syn-error)" : "var(--nm-accent)", color: "#fff" }}>
-                {dialog.type === "emoji" ? "Save" : "Delete"}
-              </button>
+              {dialog.type === "delete" && <button type="submit" className="nm-btn rounded-md px-3 py-2 text-sm font-medium"
+                style={{ background: "var(--nm-syn-error)", color: "#fff" }}>Delete</button>}
             </div>
           </form>
         </dialog>

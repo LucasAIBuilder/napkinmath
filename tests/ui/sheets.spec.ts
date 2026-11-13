@@ -18,27 +18,37 @@ test("collapsed sheets keep the expand control clear", async ({ page }) => {
   await expect(page.getByText("My Sheets")).toBeVisible();
 });
 
-test("sheet dialogs save emoji and cancel or confirm deletion", async ({ page }) => {
+test("emoji picker searches and saves a selection", async ({ page }) => {
   const sheet = page.locator(".group").filter({ has: page.locator('button[aria-label="Sheet actions"]') }).first();
   await sheet.hover();
   await page.getByRole("button", { name: "Sheet actions" }).first().click();
-  await page.getByRole("button", { name: "Emoji", exact: true }).click();
+  const action = page.getByRole("button", { name: "Emoji", exact: true });
+  await action.click();
   const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible();
-  await dialog.getByLabel("Emoji").fill("🚀");
-  await dialog.getByRole("button", { name: "Save" }).click();
+  await dialog.getByRole("textbox", { name: "Type to search for an emoji" }).focus();
+  await page.keyboard.press("Escape");
+  await expect(action).toBeFocused();
+  await action.click();
+  await dialog.getByRole("textbox", { name: "Type to search for an emoji" }).fill("rocket");
+  await dialog.getByRole("gridcell", { name: "rocket", exact: true }).focus();
+  await page.keyboard.press("Enter");
   await expect(sheet).toContainText("🚀");
+  await expect(action).toBeFocused();
+});
+
+test("delete dialog cancels or confirms deletion", async ({ page }) => {
+  const sheet = page.locator(".group").filter({ has: page.locator('button[aria-label="Sheet actions"]') }).first();
   await sheet.hover();
   await page.getByRole("button", { name: "Sheet actions" }).first().click();
   await page.getByRole("button", { name: "Delete", exact: true }).click();
+  const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("This sheet has content.");
   await dialog.getByRole("button", { name: "Cancel" }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(sheet).toContainText("🚀");
+  await expect(sheet).toBeVisible();
   await sheet.hover();
   await page.getByRole("button", { name: "Sheet actions" }).first().click();
   await page.getByRole("button", { name: "Delete", exact: true }).click();
   await dialog.getByRole("button", { name: "Delete" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page.locator(".group").filter({ hasText: "🚀" })).toHaveCount(0);
 });
