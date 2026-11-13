@@ -25,6 +25,7 @@ test("emoji picker searches and saves a selection", async ({ page }) => {
   const action = page.getByRole("button", { name: "Emoji", exact: true });
   await action.click();
   const dialog = page.getByRole("dialog");
+  await expect(page.getByText("Rename", { exact: true })).toHaveCount(0);
   await dialog.getByRole("textbox", { name: "Type to search for an emoji" }).focus();
   await page.keyboard.press("Escape");
   await expect(action).toBeFocused();

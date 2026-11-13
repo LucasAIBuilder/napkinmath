@@ -56,6 +56,7 @@ export default function SheetSelector(props: Props) {
   const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const [dialog, setDialog] = useState<{ type: "emoji" | "delete"; id: string } | null>(null);
   const emojiActionRef = useRef<HTMLButtonElement>(null);
+  const emojiMenuRef = useRef<{ id: string; x: number; y: number } | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const longPressRef = useRef<number | null>(null);
   const longPressFiredRef = useRef(false);
@@ -306,6 +307,8 @@ export default function SheetSelector(props: Props) {
               className="nm-btn flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-black/5"
               ref={emojiActionRef}
               onClick={() => {
+                emojiMenuRef.current = menu;
+                setMenu(null);
                 setDialog({ type: "emoji", id: menu.id });
               }}
             >
@@ -338,11 +341,14 @@ export default function SheetSelector(props: Props) {
           ref={dialogRef}
           onKeyDown={(e) => { if (e.key === "Escape") e.stopPropagation(); }}
           onClose={() => {
-            if (dialog.type === "emoji") requestAnimationFrame(() => emojiActionRef.current?.focus());
+            if (dialog.type === "emoji" && emojiMenuRef.current) {
+              setMenu(emojiMenuRef.current);
+              requestAnimationFrame(() => emojiActionRef.current?.focus());
+            }
             setDialog(null);
           }}
           aria-labelledby="sheet-dialog-title"
-          className="w-[min(90vw,24rem)] rounded-xl border p-5 shadow-xl backdrop:bg-black/50"
+          className={(dialog.type === "emoji" ? "w-[min(92vw,30rem)]" : "w-[min(90vw,24rem)]") + " max-h-[calc(100dvh-1rem)] rounded-xl border p-5 shadow-xl backdrop:bg-black/50"}
           style={{ background: "var(--nm-bg-card)", borderColor: "var(--nm-border)", color: "var(--nm-text)" }}
         >
           <form onSubmit={(e) => {
@@ -360,7 +366,7 @@ export default function SheetSelector(props: Props) {
                 <Suspense fallback={<p role="status">Loading emoji…</p>}>
                   <EmojiPicker
                     width="100%"
-                    height={360}
+                    height="min(440px, 60vh)"
                     emojiStyle="native"
                     autoFocusSearch
                     previewConfig={{ showPreview: false }}
