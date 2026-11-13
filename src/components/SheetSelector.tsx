@@ -18,6 +18,8 @@ type Props = {
   onEmoji: (id: string, emoji: string) => void;
   /** Shown next to New in the footer. */
   footerAction?: JSX.Element;
+  /** Adds "Export as text" to a sheet's menu. */
+  onExportText?: (id: string) => void;
   collapsed: boolean;
   setCollapsed: (v: boolean) => void;
   mobileOpen: boolean;
@@ -47,6 +49,7 @@ export default function SheetSelector(props: Props) {
     onDelete,
     onEmoji,
     footerAction,
+    onExportText,
     collapsed,
     setCollapsed,
     mobileOpen,
@@ -305,6 +308,18 @@ export default function SheetSelector(props: Props) {
             >
               Rename
             </button>
+            {onExportText && (
+              <button
+                type="button"
+                className="nm-btn flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-black/5"
+                onClick={() => {
+                  setMenu(null);
+                  onExportText(menu.id);
+                }}
+              >
+                Export as text
+              </button>
+            )}
             <button
               type="button"
               className="nm-btn flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-black/5"

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Editor from "./components/Editor";
 import SheetSelector, { type Sheet } from "./components/SheetSelector";
-import SheetTransfer from "./components/SheetTransfer";
+import SheetTransfer, { download } from "./components/SheetTransfer";
 import ThemePicker from "./components/ThemePicker";
 import ThemeToggle from "./components/ThemeToggle";
 import { track } from "./lib/analytics";
-import { mergeSheets } from "./lib/sheetFile";
+import { mergeSheets, sheetFileName } from "./lib/sheetFile";
 import {
   applyTheme,
   getStoredScheme,
@@ -215,6 +215,11 @@ export default function App() {
     return { added: result.added, updated: result.updated };
   }
 
+  function exportSheetText(id: string) {
+    const s = sheets.find((x) => x.id === id);
+    if (s) download(sheetFileName(s.name), s.content, "text/plain;charset=utf-8");
+  }
+
   if (showPicker) {
     return (
       <ThemePicker
@@ -313,12 +318,13 @@ export default function App() {
             onRename={renameSheet}
             onDelete={deleteSheet}
             onEmoji={emojiSheet}
+            onExportText={exportSheetText}
             footerAction={
               <SheetTransfer
                 sheets={sheets}
-                activeSheet={activeSheet}
                 onImport={importSheets}
                 alignLeft={sidebarCollapsed}
+                showLabel={!sidebarCollapsed}
               />
             }
             collapsed={sidebarCollapsed}

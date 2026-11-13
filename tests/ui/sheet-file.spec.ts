@@ -15,11 +15,12 @@ test("a backup brings the sheets back after the storage is cleared; a bad file c
   await page.keyboard.press("Enter");
   await expect(page.getByText("Trip budget")).toBeVisible();
 
-  const menu = page.getByRole("button", { name: "Back up, export or import sheets" });
-  await menu.click();
+  await page.getByText("Trip budget").click({ button: "right" });
   const textDownload = page.waitForEvent("download");
-  await page.getByRole("menuitem", { name: "Export this sheet as text" }).click();
+  await page.getByRole("button", { name: "Export as text" }).click();
   expect((await textDownload).suggestedFilename()).toBe("Trip budget.txt");
+
+  const menu = page.getByRole("button", { name: "Backup" });
 
   await menu.click();
   const downloading = page.waitForEvent("download");

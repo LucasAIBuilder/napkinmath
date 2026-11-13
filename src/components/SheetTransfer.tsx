@@ -1,24 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  backupFileName,
-  buildBackup,
-  parseBackup,
-  sheetFileName,
-  type SheetRecord,
-} from "../lib/sheetFile";
+import { backupFileName, buildBackup, parseBackup, type SheetRecord } from "../lib/sheetFile";
 
 type Props = {
   sheets: SheetRecord[];
-  activeSheet: SheetRecord | null;
   /** Adds the imported sheets and returns how many were added and updated. */
   onImport: (incoming: SheetRecord[]) => { added: number; updated: number };
   /** Open the menu from the left edge (the collapsed sidebar is too narrow to open it leftwards). */
   alignLeft?: boolean;
+  /** Show the "Backup" label beside the icon (the collapsed sidebar has room for the icon only). */
+  showLabel?: boolean;
 };
 
 type Toast = { text: string; error: boolean };
 
-function download(fileName: string, text: string, type: string) {
+export function download(fileName: string, text: string, type: string) {
   const url = URL.createObjectURL(new Blob([text], { type }));
   const a = document.createElement("a");
   a.href = url;
@@ -42,8 +37,8 @@ function importMessage(added: number, updated: number) {
   return text[0].toUpperCase() + text.slice(1) + ".";
 }
 
-// Sidebar footer menu: back up all sheets, export the current sheet as text, import a backup.
-export default function SheetTransfer({ sheets, activeSheet, onImport, alignLeft = false }: Props) {
+// Sidebar footer menu for the whole workspace: back up all sheets, import a backup.
+export default function SheetTransfer({ sheets, onImport, alignLeft = false, showLabel = false }: Props) {
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -98,14 +93,23 @@ export default function SheetTransfer({ sheets, activeSheet, onImport, alignLeft
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="nm-btn inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm"
+        className={
+          "nm-btn inline-flex h-9 items-center justify-center gap-2 rounded-lg border text-sm font-medium " +
+          (showLabel ? "px-3" : "w-9")
+        }
         style={{ borderColor: "var(--nm-border)", color: "var(--nm-text)" }}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Back up, export or import sheets"
-        title="Back up, export or import sheets"
+        aria-label="Backup"
+        title="Back up or import sheets"
       >
-        ⇅
+        {/* Archive box */}
+        <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="2" y="3" width="20" height="5" rx="1" />
+          <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+          <path d="M10 12h4" />
+        </svg>
+        {showLabel && <span>Backup</span>}
       </button>
 
       {open && (
@@ -124,18 +128,6 @@ export default function SheetTransfer({ sheets, activeSheet, onImport, alignLeft
             }}
           >
             Back up all sheets
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className={item}
-            disabled={!activeSheet}
-            onClick={() => {
-              if (activeSheet) download(sheetFileName(activeSheet.name), activeSheet.content, "text/plain;charset=utf-8");
-              setOpen(false);
-            }}
-          >
-            Export this sheet as text
           </button>
           <button
             type="button"
