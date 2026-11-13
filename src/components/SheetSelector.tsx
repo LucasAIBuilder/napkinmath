@@ -16,6 +16,8 @@ type Props = {
   onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
   onEmoji: (id: string, emoji: string) => void;
+  /** Shown next to New in the footer. */
+  footerAction?: JSX.Element;
   collapsed: boolean;
   setCollapsed: (v: boolean) => void;
   mobileOpen: boolean;
@@ -44,6 +46,7 @@ export default function SheetSelector(props: Props) {
     onRename,
     onDelete,
     onEmoji,
+    footerAction,
     collapsed,
     setCollapsed,
     mobileOpen,
@@ -256,19 +259,20 @@ export default function SheetSelector(props: Props) {
         })}
       </div>
 
-      <div className="p-2">
+      <div className={collapsed ? "flex flex-col gap-2 p-2" : "flex gap-2 p-2"}>
         <button
           type="button"
           onClick={() => {
             onNew();
             setMobileOpen(false);
           }}
-          className="nm-btn inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border text-sm font-medium"
+          className="nm-btn inline-flex h-9 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border text-sm font-medium"
           style={{ borderColor: "var(--nm-border)", color: "var(--nm-text)" }}
         >
           <span>＋</span>
           {!collapsed && <span>New</span>}
         </button>
+        {footerAction}
       </div>
 
       {menu && (
