@@ -323,8 +323,7 @@ export default function App() {
               <SheetTransfer
                 sheets={sheets}
                 onImport={importSheets}
-                alignLeft={sidebarCollapsed}
-                showLabel={!sidebarCollapsed}
+                collapsed={sidebarCollapsed}
               />
             }
             collapsed={sidebarCollapsed}

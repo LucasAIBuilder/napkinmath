@@ -269,7 +269,10 @@ export default function SheetSelector(props: Props) {
             onNew();
             setMobileOpen(false);
           }}
-          className="nm-btn inline-flex h-9 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border text-sm font-medium"
+          className={
+            "nm-btn inline-flex h-9 items-center justify-center gap-2 rounded-lg border text-sm font-medium " +
+            (collapsed ? "w-full" : "min-w-0 flex-1")
+          }
           style={{ borderColor: "var(--nm-border)", color: "var(--nm-text)" }}
         >
           <span>＋</span>

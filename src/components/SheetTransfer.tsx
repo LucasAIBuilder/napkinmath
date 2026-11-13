@@ -5,10 +5,8 @@ type Props = {
   sheets: SheetRecord[];
   /** Adds the imported sheets and returns how many were added and updated. */
   onImport: (incoming: SheetRecord[]) => { added: number; updated: number };
-  /** Open the menu from the left edge (the collapsed sidebar is too narrow to open it leftwards). */
-  alignLeft?: boolean;
-  /** Show the "Backup" label beside the icon (the collapsed sidebar has room for the icon only). */
-  showLabel?: boolean;
+  /** In the collapsed sidebar: fill the column like New, and open the menu from the left edge. */
+  collapsed?: boolean;
 };
 
 type Toast = { text: string; error: boolean };
@@ -38,7 +36,7 @@ function importMessage(added: number, updated: number) {
 }
 
 // Sidebar footer menu for the whole workspace: back up all sheets, import a backup.
-export default function SheetTransfer({ sheets, onImport, alignLeft = false, showLabel = false }: Props) {
+export default function SheetTransfer({ sheets, onImport, collapsed = false }: Props) {
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -89,13 +87,13 @@ export default function SheetTransfer({ sheets, onImport, alignLeft = false, sho
   const item = "nm-btn flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm hover:bg-black/5";
 
   return (
-    <div ref={menuRef} className="relative">
+    <div ref={menuRef} className={collapsed ? "relative w-full" : "relative"}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={
-          "nm-btn inline-flex h-9 items-center justify-center gap-2 rounded-lg border text-sm font-medium " +
-          (showLabel ? "px-3" : "w-9")
+          "nm-btn inline-flex h-9 items-center justify-center rounded-lg border text-sm " +
+          (collapsed ? "w-full" : "w-9 shrink-0")
         }
         style={{ borderColor: "var(--nm-border)", color: "var(--nm-text)" }}
         aria-haspopup="menu"
@@ -109,13 +107,12 @@ export default function SheetTransfer({ sheets, onImport, alignLeft = false, sho
           <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
           <path d="M10 12h4" />
         </svg>
-        {showLabel && <span>Backup</span>}
       </button>
 
       {open && (
         <div
           role="menu"
-          className={"absolute bottom-full z-50 mb-1 min-w-52 rounded-lg border p-1 shadow-lg " + (alignLeft ? "left-0" : "right-0")}
+          className={"absolute bottom-full z-50 mb-1 min-w-52 rounded-lg border p-1 shadow-lg " + (collapsed ? "left-0" : "right-0")}
           style={{ background: "var(--nm-bg-card)", borderColor: "var(--nm-border)", color: "var(--nm-text)" }}
         >
           <button
