@@ -15,6 +15,7 @@
     "ext:build:firefox": "node extension/build.js --target=firefox"
   },
   "dependencies": {
+    "emoji-picker-react": "^5.1.4",
     "mathjs": "^12.4.3",
     "posthog-js": "^1.447.3",
     "react": "^18.3.1",

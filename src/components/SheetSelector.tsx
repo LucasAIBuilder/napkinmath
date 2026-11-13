@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+
+const EmojiPicker = lazy(() => import("emoji-picker-react"));
 
 export type Sheet = {
   id: string;
@@ -52,6 +54,9 @@ export default function SheetSelector(props: Props) {
 
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [dialog, setDialog] = useState<{ type: "emoji" | "delete"; id: string } | null>(null);
+  const menuRowRef = useRef<HTMLElement | null>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const longPressRef = useRef<number | null>(null);
   const longPressFiredRef = useRef(false);
 
@@ -59,7 +64,7 @@ export default function SheetSelector(props: Props) {
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !dialog) {
         setMenu(null);
         setMobileOpen(false);
         setRenamingId(null);
@@ -67,9 +72,14 @@ export default function SheetSelector(props: Props) {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [setMobileOpen]);
+  }, [setMobileOpen, dialog]);
 
-  function openMenu(id: string, x: number, y: number) {
+  useEffect(() => {
+    if (dialog) dialogRef.current?.showModal();
+  }, [dialog]);
+
+  function openMenu(id: string, x: number, y: number, row: HTMLElement | null) {
+    menuRowRef.current = row;
     setMenu({ id, x, y });
     setRenamingId(null);
   }
@@ -80,7 +90,7 @@ export default function SheetSelector(props: Props) {
       style={{ background: "var(--nm-bg-gutter)", borderRight: "1px solid var(--nm-border-subtle)" }}
       onClick={() => setMenu(null)}
     >
-      <div className={collapsed ? "relative px-2 py-2" : "flex items-center justify-between px-3 py-2"}>
+      <div className={collapsed ? "p-2" : "flex items-center justify-between px-3 py-2"}>
         {!collapsed ? (
           <>
             <div className="min-w-0">
@@ -114,20 +124,11 @@ export default function SheetSelector(props: Props) {
           </>
         ) : (
           <>
-            <div className="pt-9 flex justify-center">
-              <div
-                className="text-xs font-semibold tracking-wide whitespace-nowrap -rotate-90 origin-center"
-                style={{ color: "var(--nm-text-muted)" }}
-              >
-                My Sheets
-              </div>
-            </div>
-
-            <div className="absolute right-2 top-2 flex items-center gap-1">
+            <div className="flex w-full items-center">
               {/* mobile toggle */}
               <button
                 type="button"
-                className="nm-btn inline-flex h-8 w-8 items-center justify-center rounded-md border text-sm sm:hidden"
+                className="nm-btn inline-flex h-9 w-full items-center justify-center rounded-lg border text-sm sm:hidden"
                 style={{ borderColor: "var(--nm-border)", color: "var(--nm-text-muted)" }}
                 onClick={() => setMobileOpen(false)}
                 aria-label="Close sheets"
@@ -137,7 +138,7 @@ export default function SheetSelector(props: Props) {
 
               <button
                 type="button"
-                className="nm-btn hidden h-8 w-8 items-center justify-center rounded-md border text-sm sm:inline-flex"
+                className="nm-btn hidden h-9 w-full items-center justify-center rounded-lg border text-sm sm:inline-flex"
                 style={{ borderColor: "var(--nm-border)", color: "var(--nm-text-muted)" }}
                 onClick={() => setCollapsed(!collapsed)}
                 aria-label={collapsed ? "Expand sheets" : "Collapse sheets"}
@@ -156,8 +157,9 @@ export default function SheetSelector(props: Props) {
           return (
             <div
               key={s.id}
+              tabIndex={-1}
               className={
-                "group mb-1 flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2" +
+                "group mb-1 flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--nm-accent)]" +
                 (isActive ? "" : " hover:bg-black/5")
               }
               style={{
@@ -178,15 +180,16 @@ export default function SheetSelector(props: Props) {
               }}
               onContextMenu={(e) => {
                 e.preventDefault();
-                openMenu(s.id, e.clientX, e.clientY);
+                openMenu(s.id, e.clientX, e.clientY, e.currentTarget);
               }}
               onPointerDown={(e) => {
                 if (e.pointerType !== "touch") return;
                 longPressFiredRef.current = false;
                 if (longPressRef.current) window.clearTimeout(longPressRef.current);
+                const row = e.currentTarget;
                 longPressRef.current = window.setTimeout(() => {
                   longPressFiredRef.current = true;
-                  openMenu(s.id, e.clientX, e.clientY);
+                  openMenu(s.id, e.clientX, e.clientY, row);
                 }, 520);
               }}
               onPointerUp={() => {
@@ -237,14 +240,14 @@ export default function SheetSelector(props: Props) {
               {!collapsed && (
                 <button
                   type="button"
-                  className="nm-btn hidden h-7 w-7 items-center justify-center rounded-md border text-xs group-hover:inline-flex"
+                  className="nm-btn hidden h-7 w-7 items-center justify-center rounded-md border text-xs group-hover:inline-flex group-focus-within:inline-flex"
                   style={{
                     borderColor: isActive ? "rgba(255,255,255,0.35)" : "var(--nm-border)",
                     color: isActive ? "#fff" : "var(--nm-text-muted)",
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    openMenu(s.id, (e as any).clientX ?? 0, (e as any).clientY ?? 0);
+                    openMenu(s.id, e.clientX, e.clientY, e.currentTarget.closest(".group"));
                   }}
                   aria-label="Sheet actions"
                 >
@@ -305,10 +308,8 @@ export default function SheetSelector(props: Props) {
               type="button"
               className="nm-btn flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-black/5"
               onClick={() => {
-                const cur = sheets.find((s) => s.id === menu.id);
-                const next = window.prompt("Emoji", cur?.emoji ?? "")?.trim();
-                if (next) onEmoji(menu.id, next);
                 setMenu(null);
+                setDialog({ type: "emoji", id: menu.id });
               }}
             >
               Emoji
@@ -318,13 +319,7 @@ export default function SheetSelector(props: Props) {
               className="nm-btn flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-black/5"
               style={{ color: "var(--nm-syn-error)" }}
               onClick={() => {
-                const cur = sheets.find((s) => s.id === menu.id);
-                const ok = window.confirm(
-                  cur?.content?.trim()
-                    ? `Delete “${cur.name}”? This sheet has content.`
-                    : `Delete “${cur?.name ?? "sheet"}”?`,
-                );
-                if (ok) onDelete(menu.id);
+                setDialog({ type: "delete", id: menu.id });
                 setMenu(null);
               }}
             >
@@ -340,6 +335,75 @@ export default function SheetSelector(props: Props) {
   return (
     <>
       <div className={"hidden h-full sm:block " + (collapsed ? "w-14" : "w-[220px]")}>{Sidebar}</div>
+
+      {dialog && (
+        <dialog
+          ref={dialogRef}
+          onKeyDown={(e) => { if (e.key === "Escape") e.stopPropagation(); }}
+          onClose={() => {
+            if (dialog.type === "emoji") {
+              requestAnimationFrame(() => menuRowRef.current?.focus());
+            }
+            setDialog(null);
+          }}
+          aria-labelledby="sheet-dialog-title"
+          className={(dialog.type === "emoji" ? "w-[min(92vw,30rem)]" : "w-[min(90vw,24rem)]") + " max-h-[calc(100dvh-1rem)] rounded-xl border p-5 shadow-xl backdrop:bg-black/50"}
+          style={{ background: "var(--nm-bg-card)", borderColor: "var(--nm-border)", color: "var(--nm-text)" }}
+        >
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (dialog.type === "delete") {
+              onDelete(dialog.id);
+              dialogRef.current?.close();
+            }
+          }}>
+            <h2 id="sheet-dialog-title" className="text-base font-semibold">
+              {dialog.type === "emoji" ? "Change emoji" : "Delete sheet?"}
+            </h2>
+            {dialog.type === "emoji" ? (
+              <div className="mt-4">
+                <Suspense fallback={<p role="status">Loading emoji…</p>}>
+                  <EmojiPicker
+                    width="100%"
+                    height="min(440px, 60vh)"
+                    emojiStyle="native"
+                    autoFocusSearch
+                    previewConfig={{ showPreview: false }}
+                    onEmojiClick={(selected) => {
+                      onEmoji(dialog.id, selected.emoji);
+                      dialogRef.current?.close();
+                    }}
+                    style={{
+                      "--epr-bg-color": "var(--nm-bg-card)",
+                      "--epr-text-color": "var(--nm-text)",
+                      "--epr-picker-border-color": "var(--nm-border)",
+                      "--epr-search-input-bg-color": "var(--nm-bg)",
+                      "--epr-search-input-bg-color-active": "var(--nm-bg)",
+                      "--epr-category-label-bg-color": "var(--nm-bg-card)",
+                      "--epr-hover-bg-color": "var(--nm-bg-active)",
+                      "--epr-focus-bg-color": "var(--nm-bg-active)",
+                      "--epr-highlight-color": "var(--nm-accent)",
+                      "--epr-category-icon-active-color": "var(--nm-accent)",
+                      "--epr-category-icon-inactive-color": "var(--nm-text-muted)",
+                    } as React.CSSProperties}
+                  />
+                </Suspense>
+              </div>
+            ) : (
+              <p className="mt-3 text-sm" style={{ color: "var(--nm-text-muted)" }}>
+                Delete “{sheets.find((s) => s.id === dialog.id)?.name ?? "sheet"}”?
+                {sheets.find((s) => s.id === dialog.id)?.content.trim() && " This sheet has content."}
+              </p>
+            )}
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" autoFocus={dialog.type === "delete"} onClick={() => dialogRef.current?.close()}
+                className="nm-btn rounded-md border px-3 py-2 text-sm" style={{ borderColor: "var(--nm-border)" }}>Cancel</button>
+              {dialog.type === "delete" && <button type="submit" className="nm-btn rounded-md px-3 py-2 text-sm font-medium"
+                style={{ background: "var(--nm-syn-error)", color: "#fff" }}>Delete</button>}
+            </div>
+          </form>
+        </dialog>
+      )}
 
       {/* Mobile drawer */}
       {mobileOpen && (
