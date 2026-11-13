@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Editor from "./components/Editor";
 import SheetSelector, { type Sheet } from "./components/SheetSelector";
+import SheetTransfer, { download } from "./components/SheetTransfer";
 import ThemePicker from "./components/ThemePicker";
 import ThemeToggle from "./components/ThemeToggle";
 import { track } from "./lib/analytics";
+import { mergeSheets, sheetFileName } from "./lib/sheetFile";
 import {
   applyTheme,
   getStoredScheme,
@@ -205,6 +207,19 @@ export default function App() {
     setClearArmed(false);
   }
 
+  // Imported sheets join the current ones; the active sheet changes only when there was none.
+  function importSheets(incoming: Sheet[]) {
+    const result = mergeSheets(sheets, incoming);
+    setSheets(result.sheets);
+    if (!sheets.length && result.sheets.length) setActiveSheetId(result.sheets[0].id);
+    return { added: result.added, updated: result.updated };
+  }
+
+  function exportSheetText(id: string) {
+    const s = sheets.find((x) => x.id === id);
+    if (s) download(sheetFileName(s.name), s.content, "text/plain;charset=utf-8");
+  }
+
   if (showPicker) {
     return (
       <ThemePicker
@@ -303,6 +318,14 @@ export default function App() {
             onRename={renameSheet}
             onDelete={deleteSheet}
             onEmoji={emojiSheet}
+            onExportText={exportSheetText}
+            footerAction={
+              <SheetTransfer
+                sheets={sheets}
+                onImport={importSheets}
+                collapsed={sidebarCollapsed}
+              />
+            }
             collapsed={sidebarCollapsed}
             setCollapsed={setSidebarCollapsed}
             mobileOpen={mobileSheetsOpen}
