@@ -311,7 +311,7 @@ export default function App() {
 
           <div className="min-w-0 flex-1 px-3 py-4 sm:px-0 sm:py-0">
             <div className="h-full sm:pl-3">
-              <Editor text={activeSheet?.content ?? ""} setText={setActiveContent} />
+              <Editor key={activeSheetId} text={activeSheet?.content ?? ""} setText={setActiveContent} />
             </div>
           </div>
         </div>
